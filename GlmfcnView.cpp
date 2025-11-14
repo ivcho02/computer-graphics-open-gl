@@ -91,56 +91,7 @@ BOOL CGlmfcnView::InitializeOpenGL()
 
 void CGlmfcnView::RenderScene()
 {
-	CGlmfcnDoc* pDoc = GetDocument();
-	
-	// Clear the color and depth buffers
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	
-	// Enable lighting
-	glEnable(GL_LIGHTING);
-	glEnable(GL_LIGHT0);
-	
-	// Set up ambient light for shadow effect
-	GLfloat ambientLight[] = { 0.3f, 0.3f, 0.3f, 1.0f };
-	GLfloat diffuseLight[] = { 0.7f, 0.7f, 0.7f, 1.0f };
-	GLfloat lightPosition[] = { 1.0f, 1.0f, 1.0f, 0.0f };
-	
-	glLightfv(GL_LIGHT0, GL_AMBIENT, ambientLight);
-	glLightfv(GL_LIGHT0, GL_DIFFUSE, diffuseLight);
-	glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
-	
-	// Set global ambient light (creates shadow effect)
-	GLfloat globalAmbient[] = { 0.2f, 0.2f, 0.2f, 1.0f };
-	glLightModelfv(GL_LIGHT_MODEL_AMBIENT, globalAmbient);
-	
-	// Enable color material for better lighting
-	glEnable(GL_COLOR_MATERIAL);
-	glColorMaterial(GL_FRONT, GL_AMBIENT_AND_DIFFUSE);
-	
-	// Set material properties
-	GLfloat matAmbient[] = { 0.5f, 0.5f, 0.7f, 1.0f };
-	GLfloat matDiffuse[] = { 0.5f, 0.5f, 0.7f, 1.0f };
-	glMaterialfv(GL_FRONT, GL_AMBIENT, matAmbient);
-	glMaterialfv(GL_FRONT, GL_DIFFUSE, matDiffuse);
-	
-	// Reset modelview matrix
-	glLoadIdentity();
-	
-	// Position the sphere in the center
-	glTranslatef(1.0f, 1.0f, 0.0f);
-	
-	// Draw sphere using GLU
-	GLUquadricObj* quadric = gluNewQuadric();
-	gluQuadricNormals(quadric, GLU_SMOOTH);
-	gluQuadricDrawStyle(quadric, GLU_FILL);
-	
-	// Draw sphere with radius 0.5, 32 slices, 32 stacks
-	gluSphere(quadric, 0.5, 32, 32);
-	
-	gluDeleteQuadric(quadric);
-	
-	// Disable lighting for other drawing
-	glDisable(GL_LIGHTING);
+	// Empty - no OpenGL rendering needed
 }
 
 BOOL CGlmfcnView::SetupPixelFormat()
@@ -294,13 +245,6 @@ void CGlmfcnView::OnDraw(CDC* pDC)
 			pDC->Rectangle(pDoc->rectangles[i]);
 			pDC->SelectObject(brush);
 		}
-	}
-
-	// Render OpenGL scene
-	if (m_hDC && m_hRC) {
-		makeCurrent();
-		RenderScene();
-		::SwapBuffers(m_hDC);
 	}
 }
 
