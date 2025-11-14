@@ -9,6 +9,7 @@
 #include <gl/gl.h>
 #include <gl/glu.h>
 #include "glaux.h"
+#include <math.h>
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -29,10 +30,7 @@ BEGIN_MESSAGE_MAP(CGlmfcnView, CView)
 	ON_WM_TIMER()
 	ON_WM_LBUTTONDOWN()
 	ON_WM_LBUTTONUP()
-	ON_WM_RBUTTONDOWN()
 	ON_WM_MOUSEMOVE()
-	ON_WM_MBUTTONDBLCLK()
-	ON_WM_LBUTTONDBLCLK()
 	//	ON_COMMAND(ID_VIEW_DIFFUSECOLOR, &CGlmfcnView::OnViewDiffusecolor)
 END_MESSAGE_MAP()
 
@@ -43,8 +41,11 @@ float spin=0.0;
 
 CGlmfcnView::CGlmfcnView()
 {
-	// TODO: add construction code here
-
+	// Initialize sphere rotation
+	m_rotationX = 0.0f;
+	m_rotationY = 0.0f;
+	m_isDragging = false;
+	m_lastMousePos = CPoint(0, 0);
 }
 
 CGlmfcnView::~CGlmfcnView()
@@ -101,16 +102,20 @@ void CGlmfcnView::RenderScene()
 	glEnable(GL_LIGHT0);
 	
 	// Set up ambient light for shadow effect
-	GLfloat ambientLight[] = { 0.3f, 0.3f, 0.3f, 1.0f };
-	GLfloat diffuseLight[] = { 0.7f, 0.7f, 0.7f, 1.0f };
-	GLfloat lightPosition[] = { 1.0f, 1.0f, 1.0f, 0.0f };
+	GLfloat ambientLight[] = { 0.0, 0.0, 0.0, 1.0 };
+	GLfloat diffuseLight[] = { 1.0, 1.0, 0.0, 1.0 };
+	GLfloat specularLight[] = { 1.0, 1.0, 1.0, 1.0 };
+	GLfloat lightPosition[] = { 1.0, 1.0, 1.0, 0.0 };
+	GLfloat mat_shininess[] = { 1.0, 1.0, 1.0, 0.0 };
 	
 	glLightfv(GL_LIGHT0, GL_AMBIENT, ambientLight);
 	glLightfv(GL_LIGHT0, GL_DIFFUSE, diffuseLight);
+	glLightfv(GL_LIGHT0, GL_SPECULAR, specularLight);
 	glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
+	glLightfv(GL_LIGHT0, GL_SHININESS, mat_shininess);
 	
 	// Set global ambient light (creates shadow effect)
-	GLfloat globalAmbient[] = { 0.2f, 0.2f, 0.2f, 1.0f };
+	GLfloat globalAmbient[] = { 0.1f, 0.2f, 0.1f, 1.0f };
 	glLightModelfv(GL_LIGHT_MODEL_AMBIENT, globalAmbient);
 	
 	// Enable color material for better lighting
@@ -128,6 +133,10 @@ void CGlmfcnView::RenderScene()
 	
 	// Position the sphere in the center
 	glTranslatef(1.0f, 1.0f, 0.0f);
+	
+	// Apply rotation
+	glRotatef(m_rotationY, 1.0f, 0.0f, 0.0f); // Rotate around X axis
+	glRotatef(m_rotationX, 0.0f, 1.0f, 0.0f); // Rotate around Y axis
 	
 	// Draw sphere using GLU
 	GLUquadricObj* quadric = gluNewQuadric();
@@ -283,19 +292,7 @@ void CGlmfcnView::OnDraw(CDC* pDC)
 {
 	CGlmfcnDoc* pDoc = GetDocument();
 	ASSERT_VALID(pDoc);
-	// TODO: add draw code for native data here
-
-	CBrush brush;
-
-	brush.CreateSysColorBrush(COLOR_BTNFACE);
-
-	for (int i = 0; i < pDoc->rectanglesCount; i++) {
-		if (pDoc->rectangles[i] != NULL) {
-			pDC->Rectangle(pDoc->rectangles[i]);
-			pDC->SelectObject(brush);
-		}
-	}
-
+	
 	// Render OpenGL scene
 	if (m_hDC && m_hRC) {
 		makeCurrent();
@@ -304,60 +301,51 @@ void CGlmfcnView::OnDraw(CDC* pDC)
 	}
 }
 
-void CGlmfcnView::OnRButtonDown(UINT nFlags, CPoint point)
-{
-	CGlmfcnDoc* pDoc = GetDocument();
-	ASSERT_VALID(pDoc);
-	CRect newRectangles[30];
-	CRect rectRemove = NULL;
-
-	for (int i = 0; i < pDoc->rectanglesCount; i++) {
-		CRect currentRect = pDoc->rectangles[i];
-		CPoint rectBottomRight = currentRect.BottomRight();
-		CPoint rectTopLeft = currentRect.TopLeft();
-		
-		if ((point.x >= rectTopLeft.x && point.x <= rectBottomRight.x) 
-			&& (point.y >= rectTopLeft.y && point.y <= rectBottomRight.y)) {
-			
-			rectRemove = currentRect;
-			break;
-		}
-	}
-
-	for (int i = 0; i < pDoc->rectanglesCount; i++) {
-		CRect currentRect = pDoc->rectangles[i];
-
-		if (currentRect != rectRemove) {
-			newRectangles[i] = currentRect;
-		}
-	}
-
-	pDoc->rectanglesCount = sizeof(newRectangles) / sizeof(newRectangles[0]);
-	*pDoc->rectangles = newRectangles;
-	
-	Invalidate();
-	CView::OnRButtonDown(nFlags, point);
-}
-
 void CGlmfcnView::OnLButtonDown(UINT nFlags, CPoint point)
 {
-	CGlmfcnDoc* pDoc = GetDocument();
-	ASSERT_VALID(pDoc);
-
-	if (pDoc->hasFirstPoint == false) {
-		pDoc->firstPoint = point;
-		pDoc->hasFirstPoint = true;
-	} else {
-		CRect newRect = new CRect(pDoc->firstPoint, point);
-		pDoc->rectangles[pDoc->rectanglesCount] = newRect;
-		pDoc->rectanglesCount++;
-		pDoc->hasFirstPoint = false;
-	}
-	Invalidate();
-
+	m_isDragging = true;
+	m_lastMousePos = point;
+	SetCapture(); // Capture mouse to track movement outside window
+	
 	CView::OnLButtonDown(nFlags, point);
 }
 
+void CGlmfcnView::OnLButtonUp(UINT nFlags, CPoint point)
+{
+	if (m_isDragging) {
+		m_isDragging = false;
+		ReleaseCapture(); // Release mouse capture
+	}
+	
+	CView::OnLButtonUp(nFlags, point);
+}
+
+void CGlmfcnView::OnMouseMove(UINT nFlags, CPoint point)
+{
+	if (m_isDragging && (nFlags & MK_LBUTTON)) {
+		// Calculate mouse movement delta
+		int deltaX = point.x - m_lastMousePos.x;
+		int deltaY = point.y - m_lastMousePos.y;
+		
+		// Convert mouse movement to rotation angles
+		// Horizontal movement rotates around Y axis
+		m_rotationX += (float)deltaX * 0.5f;
+		
+		// Vertical movement rotates around X axis
+		m_rotationY += (float)deltaY * 0.5f;
+		
+		// Keep rotation angles in reasonable range (optional)
+		if (m_rotationX > 360.0f) m_rotationX -= 360.0f;
+		if (m_rotationX < -360.0f) m_rotationX += 360.0f;
+		if (m_rotationY > 360.0f) m_rotationY -= 360.0f;
+		if (m_rotationY < -360.0f) m_rotationY += 360.0f;
+		
+		m_lastMousePos = point;
+		Invalidate(); // Redraw the scene
+	}
+	
+	CView::OnMouseMove(nFlags, point);
+}
 
 /////////////////////////////////////////////////////////////////////////////
 // CGlmfcnView diagnostics

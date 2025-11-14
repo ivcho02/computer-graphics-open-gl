@@ -18,6 +18,11 @@ protected: // create from serialization only
 
 	HGLRC    m_hRC;
 	HDC		m_hDC;
+	// Sphere rotation and dragging state
+	float m_rotationX;
+	float m_rotationY;
+	bool m_isDragging;
+	CPoint m_lastMousePos;
 // Attributes
 public:
 	CGlmfcnDoc* GetDocument();
@@ -30,8 +35,6 @@ public:
 	//{{AFX_VIRTUAL(CGlmfcnView)
 	public:
 	virtual void OnDraw(CDC* pDC);  // overridden to draw this view
-	virtual void OnLButtonDown(UINT nFlags, CPoint point);
-	virtual void OnRButtonDown(UINT nFlags, CPoint point);
 	virtual BOOL PreCreateWindow(CREATESTRUCT& cs);
 	//}}AFX_VIRTUAL
 
@@ -56,6 +59,9 @@ protected:
 	afx_msg int OnCreate(LPCREATESTRUCT lpCreateStruct);
 	afx_msg void OnSize(UINT nType, int cx, int cy);
 	afx_msg BOOL OnEraseBkgnd(CDC* pDC);
+	afx_msg void OnLButtonDown(UINT nFlags, CPoint point);
+	afx_msg void OnLButtonUp(UINT nFlags, CPoint point);
+	afx_msg void OnMouseMove(UINT nFlags, CPoint point);
 //	afx_msg void OnViewAnimate();
 //	afx_msg void OnViewStopanimate();
 //	afx_msg void OnTimer(UINT nIDEvent);
